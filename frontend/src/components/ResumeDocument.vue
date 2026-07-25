@@ -7,6 +7,9 @@ const props = defineProps({
 
 const identification = computed(() => props.rapport.document.identification ?? {})
 const piece = computed(() => props.rapport.document.attachment ?? null)
+// Logiciel declare par le fichier. Metadonnee technique, sans rapport avec les
+// donnees de la facture : utile au lecteur pour situer l'origine d'un ecart.
+const emetteur = computed(() => props.rapport.document.producer ?? null)
 
 const montant = computed(() => {
   const valeur = identification.value.grandTotalAmount
@@ -143,6 +146,19 @@ const kilooctets = (octets) => `${(octets / 1024).toFixed(0)} Ko`
 
         <dt>Déclaration PDF/A</dt>
         <dd>{{ declarationPdfa }}</dd>
+
+        <template v-if="emetteur">
+          <dt>Logiciel émetteur</dt>
+          <dd>
+            {{ emetteur.label }}
+            <small v-if="emetteur.producer && emetteur.producer !== emetteur.label">
+              Écrit par {{ emetteur.producer }}.
+            </small>
+            <small>
+              Déclaré par le fichier lui-même, dans ses métadonnées.
+            </small>
+          </dd>
+        </template>
 
         <template v-if="piece.xmpFacturX">
           <dt>Métadonnées XMP Factur-X</dt>

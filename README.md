@@ -146,11 +146,10 @@ Deux réglages méritent une explication.
 requête après une mise en veille paie la compilation des feuilles XSLT et des
 schémas, soit environ 1,2 s de plus. Ce n'est pas dramatique, mais c'est inutile.
 
-`--concurrency 16` tient compte du fait que le processeur Saxon n'est pas sûr en
-usage concurrent : les appels Schematron sont sérialisés par un verrou dans le
-processus. Chaque validation coûtant environ 33 ms une fois les artefacts
-compilés, une concurrence de 16 laisse une marge confortable. La montée en charge
-se fait par le nombre d'instances, pas par le nombre de workers.
+`--concurrency 16` tient compte du fait que les validations passent par un fil
+unique, voir la section suivante. Chaque validation coûtant environ 33 ms une fois
+les artefacts compilés, une concurrence de 16 laisse une marge confortable. La
+montée en charge se fait par le nombre d'instances, pas par le nombre de workers.
 
 `--memory 1Gi` couvre les schémas compilés en mémoire, dont UBL 2.1 qui pèse
 5 Mo de XSD, et le fichier reçu, plafonné à 10 Mo.
@@ -234,6 +233,56 @@ la limitation.
 Sans compteur partagé, les plafonds sont **locaux à l'instance** : avec dix
 instances, le plafond effectif est multiplié par dix. Renseigner `REDIS_URL` suffit
 à les rendre globaux, voir la section suivante.
+
+### Identification du logiciel émetteur
+
+Un PDF déclare le logiciel qui l'a produit, dans `/Creator`, `/Producer` et
+`xmp:CreatorTool`. Le rapport le remonte, et les métriques le croisent avec le
+verdict.
+
+C'est une métadonnée technique sur un logiciel, sans rapport avec les données de la
+facture ni avec une personne : rien n'est demandé au visiteur et la promesse de
+confidentialité reste intacte.
+
+Ce que cela donne, dans `GET /api/metrics`, champ `issuingSoftware` : pour chaque
+logiciel rencontré, le nombre de factures analysées, le nombre de non conformes et
+le ratio. Autrement dit, quels logiciels du marché produisent du Factur-X invalide,
+et dans quelle proportion. Cette donnée n'est disponible nulle part ailleurs.
+
+Le libellé retenu privilégie l'application d'origine sur la bibliothèque qui a
+écrit le PDF, cette dernière étant souvent commune à des logiciels très différents.
+Le nombre de valeurs suivies est plafonné, la valeur venant du fichier déposé.
+
+### Manifestation d'intérêt
+
+Le visiteur peut demander à être recontacté. Sur sa seule initiative, après le
+rapport, jamais avant, et avec un consentement explicite non préconché.
+
+```bash
+export LEADS_WEBHOOK_URL=https://votre-crm.example/hooks/facturx
+export LEADS_CONTROLLER="Votre société, adresse, courriel de contact"
+```
+
+**La fonction reste inactive tant que ces deux valeurs manquent**, et l'interface ne
+la propose pas. Une destination, sans quoi on recueillerait une adresse sans savoir
+où elle va. Un responsable de traitement, sans quoi le visiteur ne saurait pas à
+qui il confie son adresse ni à qui réclamer son effacement.
+
+Ce qui est transmis : l'adresse saisie, le logiciel, le secteur et le volume
+déclarés, tous facultatifs, et les faits techniques de la validation, verdict,
+profil, syntaxe et codes de règles en échec.
+
+Ce qui ne l'est jamais : le fichier, son nom, son empreinte, et **toute donnée
+figurant dans la facture**. Ni le vendeur, ni l'acheteur, ni le numéro, ni les
+montants.
+
+Le filtre est construit par liste blanche et non par exclusion : une future clé du
+rapport contenant une donnée de facture ne se retrouverait pas transmise par oubli.
+Un test le vérifie sur des données réelles, en s'assurant d'abord que le rapport
+contient bien ces données, sans quoi le test ne prouverait rien.
+
+Les mentions affichées au visiteur viennent du service et non du code de
+l'interface : elles engagent, elles doivent donc refléter la configuration réelle.
 
 ### Compteurs partagés
 
@@ -600,7 +649,7 @@ production.
 cd backend && ../.venv/Scripts/python -m pytest
 ```
 
-182 tests, dont un module par critère d'acceptation.
+211 tests, dont un module par critère d'acceptation.
 
 Les dépendances externes optionnelles ne sont pas obligatoires pour exécuter la
 suite : sans veraPDF ni Redis, les tests concernés se sautent au lieu d'échouer.
@@ -622,6 +671,7 @@ REDIS_URL=redis://127.0.0.1:6379/0 VERAPDF_ENABLED=1 VERAPDF_JAR=/opt/verapdf/bi
 | `test_apikeys.py` | Chargement et validation des clés, expiration, quotas, contournement du plafond anonyme, absence de fuite de secret |
 | `test_verapdf.py` | Lecture du rapport veraPDF, dégradation propre quand l'outil manque, non-écriture sur disque |
 | `test_store.py` | Compteurs en mémoire et partagés, masquage des secrets, comportement en cas de panne du compteur |
+| `test_leads.py` | Consentement, absence de fuite de données de facture vérifiée sur données réelles, détection du logiciel émetteur |
 
 ### Les échantillons
 
@@ -679,6 +729,13 @@ n'apparaît dans le code que pour être signalée comme obsolète.
 | `TRUST_PROXY_HEADERS` | `0` | Lire l'adresse dans `X-Forwarded-For`, à activer derrière un proxy de confiance |
 | `METRICS_TOKEN` | vide | Ouvre `/api/metrics`. Vide, l'accès est fermé |
 | `API_KEYS` | vide | Déclaration JSON des clés d'API. Vide, seul l'accès anonyme existe |
+| `CONTACT_EMAIL` | vide | Contact proposé pour demander une clé. Vide, rien n'est proposé |
+| `CONTACT_URL` | vide | Page de contact, prioritaire sur le courriel |
+| `LEADS_WEBHOOK_URL` | vide | Destination des manifestations d'intérêt |
+| `LEADS_WEBHOOK_TOKEN` | vide | Jeton porteur envoyé à la destination |
+| `LEADS_VIA_REDIS` | `0` | À défaut de webhook, empile dans une file Redis |
+| `LEADS_RETENTION_MONTHS` | `24` | Durée de conservation annoncée au visiteur |
+| `LEADS_CONTROLLER` | vide | Responsable du traitement. Sans lui, la fonction est inactive |
 | `REDIS_URL` | vide | Compteurs partagés et persistants. Vide, les compteurs sont en mémoire |
 | `REDIS_TIMEOUT_SECONDS` | `1.5` | Délai d'attente sur le compteur partagé |
 | `VERAPDF_ENABLED` | `0` | Active l'audit PDF/A par veraPDF |
@@ -756,6 +813,7 @@ backend/
     metrics.py              Compteurs agrégés, sans donnée identifiante
     store.py                Compteurs de quota et de débit, mémoire ou Redis
     apikeys.py              Accès par clé, plans et quotas
+    leads.py                Manifestations d'intérêt, sur consentement explicite
     engine/
       orchestrator.py       Enchaînement des niveaux
       detect.py             Syntaxe CII ou UBL, identifiants du document

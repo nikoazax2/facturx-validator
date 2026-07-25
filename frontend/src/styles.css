@@ -294,14 +294,17 @@ form > p + p {
   color: var(--encre-tertiaire);
 }
 
-form label[for] {
+/* Cible la seule etiquette du champ fichier. Une regle sur `form label[for]`
+   habillerait aussi les etiquettes des autres formulaires, qui ne sont pas des
+   liens et n'ont pas a en avoir l'apparence. */
+form label[for="facture"] {
   font-weight: 600;
   color: var(--accent);
   cursor: pointer;
   border-bottom: 1px solid currentColor;
 }
 
-form label[for]:hover {
+form label[for="facture"]:hover {
   border-bottom-width: 2px;
 }
 
@@ -316,7 +319,7 @@ form input[type="file"] {
 }
 
 /* Le champ etant masque, l'anneau de focus se reporte sur son etiquette. */
-form input[type="file"]:focus-visible + label[for] {
+form input[type="file"]:focus-visible + label[for="facture"] {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }

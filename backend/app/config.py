@@ -84,6 +84,27 @@ CONTACT_EMAIL = os.getenv("CONTACT_EMAIL", "")
 CONTACT_URL = os.getenv("CONTACT_URL", "")
 
 # --------------------------------------------------------------------------
+# Manifestations d'interet
+#
+# Le visiteur peut demander a etre contacte. Le service ne stocke rien lui-meme :
+# la demande est transmise a la destination configuree. Sans destination, la
+# fonction est inactive et l'interface ne la propose pas, plutot que de recueillir
+# une adresse sans savoir ou elle va.
+#
+# Duree de conservation annoncee au visiteur, en mois. Elle engage : la purge est a
+# assurer dans le systeme de destination, pas ici.
+# --------------------------------------------------------------------------
+
+LEADS_WEBHOOK_URL = os.getenv("LEADS_WEBHOOK_URL", "")
+LEADS_WEBHOOK_TOKEN = os.getenv("LEADS_WEBHOOK_TOKEN", "")
+LEADS_VIA_REDIS = os.getenv("LEADS_VIA_REDIS", "0") == "1"
+LEADS_TIMEOUT_SECONDS = float(os.getenv("LEADS_TIMEOUT_SECONDS", 5))
+LEADS_RETENTION_MONTHS = int(os.getenv("LEADS_RETENTION_MONTHS", 24))
+# Responsable du traitement, a annoncer au visiteur. Sans lui, la fonction reste
+# inactive : on ne recueille pas de donnee personnelle sans dire qui la traite.
+LEADS_CONTROLLER = os.getenv("LEADS_CONTROLLER", "")
+
+# --------------------------------------------------------------------------
 # Compteurs partages
 #
 # Sans compteur partage, les quotas repartent de zero a chaque redemarrage et les

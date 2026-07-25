@@ -56,10 +56,34 @@ class Attachment:
         return self.name.lower().endswith(".xml")
 
 
+def _texte_court(valeur: object, maximum: int = 120) -> str | None:
+    """Nettoie une chaine de metadonnee avant de la reprendre.
+
+    Ces valeurs viennent du fichier depose, donc de l'appelant. Elles sont
+    renvoyees dans le rapport et comptees dans les metriques : on les borne et on
+    en retire les caracteres de controle.
+    """
+    if valeur is None:
+        return None
+    try:
+        texte = str(valeur)
+    except Exception:
+        return None
+    texte = " ".join(texte.split())
+    texte = "".join(c for c in texte if c.isprintable())
+    texte = texte.strip()
+    return texte[:maximum] or None
+
+
 @dataclass
 class PdfInspection:
     pdf_version: str | None = None
     page_count: int = 0
+    # Logiciel declare par le fichier. Metadonnee technique sur un logiciel, sans
+    # rapport avec les donnees de la facture ni avec une personne.
+    producer: str | None = None
+    creator: str | None = None
+    creator_tool: str | None = None
     encrypted: bool = False
     attachments: list[Attachment] = field(default_factory=list)
     invoice_attachment: Attachment | None = None
@@ -96,6 +120,8 @@ def inspect(raw: bytes) -> PdfInspection:
             result.page_count = len(pdf.pages)
         except Exception:
             result.page_count = 0
+
+        _read_producer(pdf, result)
 
         af_targets = _collect_document_af(pdf)
         result.has_document_af = bool(af_targets)
@@ -355,6 +381,37 @@ def _select_invoice_attachment(result: PdfInspection) -> None:
     ]
     if len(known_present) > 1:
         result.ambiguous_candidates = known_present
+
+
+def _read_producer(pdf: Any, result: PdfInspection) -> None:
+    """Releve le logiciel qui a produit le fichier.
+
+    Utile a deux titres. Pour le lecteur du rapport, cela situe l'origine du
+    document quand un ecart est constate. Agrege sur l'ensemble des validations,
+    cela indique quels logiciels produisent des fichiers non conformes, ce qui
+    n'est nulle part ailleurs disponible.
+
+    Trois sources, du plus specifique au plus general : XMP xmp:CreatorTool, puis
+    /Creator, qui nomme l'application d'origine, puis /Producer, qui nomme la
+    bibliotheque ayant ecrit le PDF.
+    """
+    try:
+        info = pdf.docinfo if "/Info" in pdf.trailer else {}
+    except Exception:
+        info = {}
+    try:
+        result.producer = _texte_court(info.get("/Producer"))
+        result.creator = _texte_court(info.get("/Creator"))
+    except Exception:
+        pass
+
+    try:
+        with pdf.open_metadata() as xmp:
+            result.creator_tool = _texte_court(xmp.get("xmp:CreatorTool"))
+    except Exception:
+        # Un XMP absent ou illisible n'est pas une anomalie a ce stade : il est
+        # controle par ailleurs.
+        pass
 
 
 def _read_xmp(pdf: Any, result: PdfInspection) -> None:

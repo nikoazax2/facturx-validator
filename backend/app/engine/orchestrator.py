@@ -114,6 +114,7 @@ def validate(raw: bytes, filename: str | None = None) -> dict[str, Any]:
             )
 
         document["attachment"] = _attachment_block(inspection)
+        document["producer"] = _producer_block(inspection)
         if inspection.invoice_attachment is not None:
             xml_bytes = inspection.invoice_attachment.payload
     else:
@@ -345,6 +346,24 @@ def validate(raw: bytes, filename: str | None = None) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 # Conteneur
 # --------------------------------------------------------------------------
+
+
+def _producer_block(inspection: pdf_module.PdfInspection) -> dict[str, Any] | None:
+    """Logiciel emetteur declare par le fichier.
+
+    `label` retient la source la plus specifique disponible : l'application
+    d'origine plutot que la bibliotheque qui a ecrit le PDF, cette derniere etant
+    souvent commune a des logiciels tres differents.
+    """
+    label = inspection.creator_tool or inspection.creator or inspection.producer
+    if not label:
+        return None
+    return {
+        "label": label,
+        "creatorTool": inspection.creator_tool,
+        "creator": inspection.creator,
+        "producer": inspection.producer,
+    }
 
 
 def _attachment_block(inspection: pdf_module.PdfInspection) -> dict[str, Any]:

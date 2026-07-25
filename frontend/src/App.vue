@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, useTemplateRef } from 'vue'
+import DemandeContact from './components/DemandeContact.vue'
 import DepotFichier from './components/DepotFichier.vue'
 import NiveauValidation from './components/NiveauValidation.vue'
 import OffreIntegration from './components/OffreIntegration.vue'
@@ -165,6 +166,8 @@ function recommencer() {
       <ReperesReglementaires :reglementation="rapport.regulatory" />
 
       <OffreIntegration :service="service" />
+
+      <DemandeContact :service="service" :rapport="rapport" />
 
       <section>
         <h2>Ce sur quoi repose ce diagnostic</h2>

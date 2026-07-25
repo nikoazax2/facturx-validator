@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import apikeys, config, store, throttle
+from . import apikeys, config, leads, store, throttle
 from .engine import messages, profiles, regulatory
 from .engine.orchestrator import validate
 from .engine.resources import RESOURCES, ArtifactsMissing
@@ -238,6 +238,66 @@ def etat_cle(request: Request) -> Any:
     return etat
 
 
+@app.post(
+    "/api/lead",
+    tags=["Intégration"],
+    summary="Demander à être recontacté",
+)
+async def manifester_interet(request: Request) -> Any:
+    """Enregistre une demande de contact, sur initiative du visiteur.
+
+    Ne touche jamais au fichier depose, qui n'est de toute facon plus en memoire a
+    ce stade. Les seuls faits de validation transmis sont ceux que l'appelant
+    renvoie lui-meme, filtres par liste blanche.
+    """
+    if not leads.active():
+        return _error(
+            404,
+            "CONTACT_INDISPONIBLE",
+            "La demande de contact n'est pas ouverte sur cette instance.",
+        )
+
+    # Meme plafond que la validation : ce point d'entree ne doit pas devenir un
+    # moyen d'inonder la destination configuree.
+    if config.RATE_LIMIT_ENABLED:
+        empreinte = throttle.client_fingerprint(
+            request.client.host if request.client else None,
+            request.headers.get("x-forwarded-for"),
+        )
+        autorise, _ = throttle.LIMITEUR.autorise(f"lead:{empreinte}")
+        if not autorise:
+            return _error(
+                429,
+                "TROP_DE_REQUETES",
+                "Trop de demandes en peu de temps. Réessayez dans un instant.",
+                headers={"Retry-After": "60"},
+            )
+
+    try:
+        charge = await request.json()
+    except Exception:
+        return _error(400, "CORPS_INVALIDE", "Le corps de la requête n'est pas du JSON.")
+    if not isinstance(charge, dict):
+        return _error(400, "CORPS_INVALIDE", "Un objet JSON est attendu.")
+
+    try:
+        interet = leads.construire(charge, charge.get("report"))
+        await asyncio.get_running_loop().run_in_executor(
+            None, leads.transmettre, interet
+        )
+    except leads.Refus as refus:
+        statut = 502 if refus.code == "DESTINATION_EN_ECHEC" else 400
+        return _error(statut, refus.code, refus.message)
+
+    METRIQUES.enregistrer_interet()
+    return {
+        "received": True,
+        "message": (
+            "Demande enregistrée. Vous pouvez demander son effacement à tout moment."
+        ),
+    }
+
+
 @app.get("/api/metrics", tags=["Service"], summary="Compteurs agrégés, accès restreint")
 def metrics(request: Request) -> Any:
     """Compteurs agreges. Ferme par defaut.
@@ -317,6 +377,7 @@ def about() -> dict[str, Any]:
                 "releve d'un acces par cle."
             ),
         },
+        "leadCapture": leads.mentions(),
         "apiAccess": {
             "enabled": apikeys.REGISTRE.actif,
             "header": "X-API-Key",
