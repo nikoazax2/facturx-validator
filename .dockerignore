@@ -1,0 +1,21 @@
+.git
+.gitignore
+.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+.playwright-mcp
+
+# Recuperes pendant la construction, jamais copies depuis l'hote : l'image doit
+# porter une version connue des regles.
+backend/resources
+backend/static
+
+frontend/node_modules
+frontend/dist
+
+# Les echantillons et fixtures servent aux tests, pas au service.
+backend/tests
+
+*.md
+!README.md

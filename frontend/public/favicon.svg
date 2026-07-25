@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Validateur Factur-X">
+  <rect width="32" height="32" rx="6" fill="#14538c" />
+  <path d="M9 7h11l4 4v14a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" fill="#ffffff" />
+  <path d="M20 7v4h4z" fill="#a9c7e8" />
+  <path d="M11.5 19.5l2.6 2.6 5.4-6" fill="none" stroke="#14538c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

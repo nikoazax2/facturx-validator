@@ -1,0 +1,859 @@
+/*
+  Parti pris visuel : un document technique, pas une page d'accueil.
+
+  L'outil s'adresse a des editeurs de logiciels qui viennent lire un diagnostic.
+  La mise en forme emprunte donc a l'imprime reglementaire : titres en serif,
+  filets d'un pixel au lieu d'ombres portees, aucun angle arrondi marque, une
+  seule couleur d'accent, chiffres et valeurs techniques en caracteres a chasse
+  fixe. Les couleurs de gravite sont desaturees : elles doivent se distinguer,
+  pas attirer l'oeil avant le texte.
+
+  Les selecteurs restent ancres sur les elements HTML, qui portent deja le sens
+  voulu (main, section, article, details, output, table, dl). Les rares variantes
+  passent par des attributs de donnees explicites (data-severity, data-status),
+  jamais par des empilements de classes.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  --papier: #fbfaf8;
+  --surface: #ffffff;
+  --surface-creuse: #f4f2ee;
+
+  --encre: #1b1a18;
+  --encre-doux: #58565110;
+  --encre-secondaire: #5c5a54;
+  --encre-tertiaire: #8b8983;
+
+  --filet: #ddd9d1;
+  --filet-appuye: #b6b1a6;
+
+  --accent: #1d3f6b;
+  --accent-voile: #eceff5;
+
+  --erreur: #8d2a20;
+  --erreur-voile: #f8eeec;
+  --alerte: #7a5413;
+  --alerte-voile: #faf3e4;
+  --succes: #2b5a35;
+  --succes-voile: #edf3ee;
+  --neutre: #6b6963;
+
+  --serif: ui-serif, Georgia, "Iowan Old Style", "Palatino Linotype", Palatino,
+    "Times New Roman", serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --mesure: 66ch;
+  --cadre: 74rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papier: #15161a;
+    --surface: #1b1d21;
+    --surface-creuse: #21242a;
+
+    --encre: #e9e7e1;
+    --encre-secondaire: #a8a6a0;
+    --encre-tertiaire: #7c7a75;
+
+    --filet: #2e3237;
+    --filet-appuye: #454a51;
+
+    --accent: #93b6df;
+    --accent-voile: #1a2431;
+
+    --erreur: #e09a92;
+    --erreur-voile: #2a1a18;
+    --alerte: #d8ae66;
+    --alerte-voile: #262015;
+    --succes: #93c19e;
+    --succes-voile: #182117;
+    --neutre: #8f8d87;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--papier);
+  color: var(--encre);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ------------------------------------------------------------------ cadre */
+
+body > div {
+  display: flow-root;
+}
+
+/*
+  Ancre sur `body header` et non `body > header` : l'application est montee dans
+  un div, ces elements ne sont donc pas enfants directs de body.
+*/
+main,
+body header,
+body footer {
+  max-width: var(--cadre);
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
+
+@media (max-width: 40rem) {
+  main,
+  body header,
+  body footer {
+    padding-inline: 1.25rem;
+  }
+}
+
+/* ---------------------------------------------------------------- entete */
+
+body header {
+  padding-block: 3.5rem 2.25rem;
+  border-bottom: 1px solid var(--filet-appuye);
+  margin-bottom: 3rem;
+}
+
+/* Surtitre : situe l'outil avant meme le titre, comme un en-tete de document. */
+body header > p[data-surtitre] {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--encre-tertiaire);
+  margin-bottom: 0.9rem;
+}
+
+body header > p {
+  max-width: var(--mesure);
+  color: var(--encre-secondaire);
+}
+
+body header > p[data-surtitre] + h1 + p {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--encre);
+}
+
+body header > h1 ~ p + p {
+  margin-top: 1rem;
+  font-size: 0.9375rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--filet);
+}
+
+/* ------------------------------------------------------------------ titres */
+
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(1.875rem, 1.4rem + 1.8vw, 2.5rem);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  margin: 0 0 1rem;
+}
+
+h2 {
+  font-family: var(--serif);
+  font-size: 1.4375rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  margin: 0 0 1rem;
+}
+
+h3 {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--encre-tertiaire);
+  margin: 0 0 0.75rem;
+}
+
+p {
+  margin: 0 0 0.8rem;
+}
+
+p:last-child {
+  margin-bottom: 0;
+}
+
+small {
+  font-size: 0.8125rem;
+  color: var(--encre-tertiaire);
+}
+
+strong {
+  font-weight: 650;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 2px;
+}
+
+abbr[title] {
+  text-decoration: underline dotted var(--filet-appuye);
+  cursor: help;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid var(--filet);
+  margin: 1.25rem 0;
+}
+
+/* --------------------------------------------------- sections numerotees */
+
+main {
+  counter-reset: partie;
+}
+
+main > section,
+main > output > section {
+  margin-bottom: 3.25rem;
+}
+
+/*
+  Le numero de partie est place dans la marge, en chasse fixe : il structure la
+  lecture sans ajouter de decoration.
+*/
+main > section > h2,
+main > output > section > h2 {
+  counter-increment: partie;
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  align-items: baseline;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--filet);
+}
+
+main > section > h2::before,
+main > output > section > h2::before {
+  content: counter(partie, decimal-leading-zero);
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--encre-tertiaire);
+}
+
+main > section > h2 + p,
+main > output > section > h2 + p {
+  max-width: var(--mesure);
+  color: var(--encre-secondaire);
+  font-size: 0.9375rem;
+  margin-bottom: 1.25rem;
+}
+
+/* ------------------------------------------------------ depot de fichier */
+
+form {
+  border: 1px solid var(--filet-appuye);
+  background: var(--surface);
+  padding: 2rem 2rem 2.25rem;
+  transition: border-color 0.12s ease, background-color 0.12s ease;
+}
+
+form[data-dragging="true"] {
+  border-color: var(--accent);
+  background: var(--accent-voile);
+}
+
+form > p {
+  margin: 0;
+  max-width: var(--mesure);
+}
+
+form > p:first-child {
+  font-size: 1.0625rem;
+}
+
+form > p + p {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--encre-tertiaire);
+}
+
+form label[for] {
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  border-bottom: 1px solid currentColor;
+}
+
+form label[for]:hover {
+  border-bottom-width: 2px;
+}
+
+form input[type="file"] {
+  /* Retire du flux visuel sans quitter l'arbre d'accessibilite. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Le champ etant masque, l'anneau de focus se reporte sur son etiquette. */
+form input[type="file"]:focus-visible + label[for] {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Fichier retenu, presente comme une fiche et non comme un message */
+
+form > dl {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--filet);
+}
+
+/* ----------------------------------------------------------------- boutons */
+
+button {
+  font-family: var(--sans);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 0.55rem 1.1rem;
+  border: 1px solid var(--filet-appuye);
+  border-radius: 2px;
+  background: var(--surface);
+  color: var(--encre);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--surface-creuse);
+  border-color: var(--encre-tertiaire);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button[type="submit"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--papier);
+}
+
+button[type="submit"]:hover:not(:disabled) {
+  background: var(--encre);
+  border-color: var(--encre);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+progress {
+  display: block;
+  width: 100%;
+  max-width: 18rem;
+  height: 2px;
+  margin-top: 1.25rem;
+  border: none;
+  background: var(--filet);
+  accent-color: var(--accent);
+}
+
+/* ----------------------------------------------------------------- verdict */
+
+output {
+  display: block;
+}
+
+article[data-verdict] {
+  border: 1px solid var(--filet-appuye);
+  border-left: 3px solid var(--neutre);
+  background: var(--surface);
+  padding: 1.75rem 2rem;
+}
+
+article[data-verdict="conforme"] {
+  border-left-color: var(--succes);
+  background: var(--succes-voile);
+}
+
+article[data-verdict="conforme_avec_avertissements"] {
+  border-left-color: var(--alerte);
+  background: var(--alerte-voile);
+}
+
+article[data-verdict="non_conforme"],
+article[data-verdict="non_evaluable"] {
+  border-left-color: var(--erreur);
+  background: var(--erreur-voile);
+}
+
+article[data-verdict] > h2 {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+  border: none;
+  padding: 0;
+  display: block;
+}
+
+article[data-verdict] > h2::before {
+  content: none;
+}
+
+article[data-verdict] > p {
+  max-width: var(--mesure);
+  color: var(--encre-secondaire);
+}
+
+/* Bandeau de chiffres cles, separe par des filets verticaux */
+
+article[data-verdict] > ul {
+  display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  border-top: 1px solid var(--filet);
+}
+
+article[data-verdict] > ul > li {
+  padding: 0.85rem 1.5rem 0 0;
+  margin-right: 1.5rem;
+  border-right: 1px solid var(--filet);
+  font-size: 0.8125rem;
+  color: var(--encre-secondaire);
+  font-variant-numeric: tabular-nums;
+}
+
+article[data-verdict] > ul > li:last-child {
+  border-right: none;
+  margin-right: 0;
+  padding-right: 0;
+}
+
+article[data-verdict] > ul > li > strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--encre);
+  letter-spacing: -0.01em;
+}
+
+/* -------------------------------------------------- listes de definitions */
+
+dl {
+  display: grid;
+  grid-template-columns: minmax(12rem, 15rem) 1fr;
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+dt {
+  color: var(--encre-tertiaire);
+  padding: 0.55rem 1.5rem 0.55rem 0;
+  border-top: 1px solid var(--filet);
+}
+
+dd {
+  margin: 0;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--filet);
+  overflow-wrap: anywhere;
+}
+
+dl > dt:first-of-type,
+dl > dt:first-of-type + dd {
+  border-top: none;
+}
+
+@media (max-width: 42rem) {
+  dl {
+    grid-template-columns: 1fr;
+  }
+
+  dt {
+    padding-bottom: 0;
+    border-top: 1px solid var(--filet);
+  }
+
+  dd {
+    padding-top: 0.15rem;
+    border-top: none;
+  }
+
+  dl > dt:first-of-type + dd {
+    border-top: none;
+  }
+}
+
+/* ------------------------------------------------------------- les niveaux */
+
+/*
+  Les niveaux forment un seul bloc borde a lignes divisees, plutot qu'une pile de
+  cartes independantes : cela se lit comme un tableau de synthese.
+*/
+section > details {
+  border: 1px solid var(--filet-appuye);
+  background: var(--surface);
+}
+
+section > details + details {
+  border-top: none;
+}
+
+section > details > summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.95rem 1.25rem;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+section > details > summary:hover {
+  background: var(--surface-creuse);
+}
+
+section > details[open] > summary {
+  border-bottom: 1px solid var(--filet);
+}
+
+section > details > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+section > details > div {
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+section > details > div > p:first-child {
+  max-width: var(--mesure);
+  color: var(--encre-secondaire);
+  font-size: 0.875rem;
+  margin-bottom: 1.25rem;
+}
+
+section > details > div > p + p {
+  max-width: var(--mesure);
+  font-size: 0.9375rem;
+}
+
+/* Etiquette d'etat : capitales en chasse fixe, filet fin, aucun aplat */
+
+[data-status] {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 6.5rem;
+  text-align: center;
+}
+
+[data-status="passed"] {
+  color: var(--succes);
+}
+
+[data-status="warning"] {
+  color: var(--alerte);
+}
+
+[data-status="failed"] {
+  color: var(--erreur);
+}
+
+[data-status="skipped"],
+[data-status="not_applicable"] {
+  color: var(--neutre);
+}
+
+/* Numero d'etape de la section explicative : marqueur neutre, volontairement
+   distinct des etiquettes d'etat, qui portent une couleur de verdict. */
+[data-etape] {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  color: var(--encre-tertiaire);
+  border: 1px solid var(--filet);
+  padding: 0.2rem 0.45rem;
+  flex-shrink: 0;
+}
+
+summary > small {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--encre-tertiaire);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------- tableau des constats */
+
+.defilement-horizontal {
+  overflow-x: auto;
+  border-top: 1px solid var(--filet-appuye);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 46rem;
+}
+
+caption {
+  text-align: left;
+  color: var(--encre-tertiaire);
+  font-size: 0.8125rem;
+  max-width: var(--mesure);
+  padding-bottom: 0.85rem;
+}
+
+th,
+td {
+  text-align: left;
+  vertical-align: top;
+  padding: 0.7rem 1rem 0.7rem 0;
+  border-bottom: 1px solid var(--filet);
+}
+
+thead th {
+  font-family: var(--mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--encre-tertiaire);
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--filet-appuye);
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+td:first-child,
+th:first-child {
+  width: 2.75rem;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--encre-tertiaire);
+}
+
+/*
+  Restreint aux cellules du tableau. L'attribut data-severity porte aussi sur les
+  elements `aside`, ou il ne doit determiner que la couleur du filet : une regle
+  non qualifiee leur imposerait la chasse fixe et un `nowrap` qui fait deborder
+  le texte.
+*/
+td[data-severity] {
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+td[data-severity="error"] {
+  color: var(--erreur);
+}
+
+td[data-severity="warning"] {
+  color: var(--alerte);
+}
+
+td[data-severity="info"] {
+  color: var(--accent);
+}
+
+code,
+samp {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+/* Un aplat leger seulement quand le code est cite dans une phrase. */
+p > code,
+dd > code,
+li > code {
+  background: var(--surface-creuse);
+  padding: 0.05rem 0.3rem;
+}
+
+td code {
+  color: var(--encre-secondaire);
+}
+
+/* -------------------------------------------------------------- remarques */
+
+aside {
+  border: 1px solid var(--filet);
+  border-left: 3px solid var(--neutre);
+  background: var(--surface);
+  padding: 1rem 1.25rem;
+  font-size: 0.9375rem;
+}
+
+aside + aside {
+  margin-top: 0.5rem;
+}
+
+aside[data-severity="warning"] {
+  border-left-color: var(--alerte);
+  background: var(--alerte-voile);
+}
+
+aside[data-severity="info"] {
+  border-left-color: var(--accent);
+}
+
+aside > p {
+  max-width: var(--mesure);
+  color: var(--encre-secondaire);
+}
+
+aside[data-severity="warning"] > p {
+  color: var(--encre);
+}
+
+/* -------------------------------------------------------------- calendrier */
+
+ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--filet-appuye);
+}
+
+ol > li {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 0.25rem 1.5rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--filet);
+}
+
+ol time {
+  font-family: var(--mono);
+  font-size: 0.8125rem;
+  color: var(--encre-secondaire);
+  font-variant-numeric: tabular-nums;
+}
+
+ol > li strong {
+  font-size: 0.9375rem;
+}
+
+ol > li small {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+@media (max-width: 42rem) {
+  ol > li {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ------------------------------------------------------------------- alerte */
+
+[role="alert"] {
+  border: 1px solid var(--erreur);
+  border-left-width: 3px;
+  background: var(--erreur-voile);
+  color: var(--encre);
+  padding: 0.9rem 1.15rem;
+  font-size: 0.9375rem;
+  max-width: var(--mesure);
+}
+
+form > [role="alert"] {
+  margin-top: 1.25rem;
+}
+
+/* --------------------------------------------------------------- pied de page */
+
+body footer {
+  margin-top: 5rem;
+  padding-block: 2rem 3rem;
+  border-top: 1px solid var(--filet-appuye);
+}
+
+body footer p {
+  max-width: var(--mesure);
+  color: var(--encre-tertiaire);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+body footer p + p {
+  margin-top: 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+}
+
+/* ------------------------------------------------------------- impression */
+
+@media print {
+  body {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  form,
+  .actions,
+  button {
+    display: none;
+  }
+
+  details {
+    /* Un rapport imprime doit montrer tous ses constats. */
+    display: block;
+  }
+
+  details > div {
+    display: block !important;
+  }
+}

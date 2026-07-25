@@ -1,0 +1,28 @@
+# Normalisation des fins de ligne. Le depot stocke en LF, la copie de travail suit
+# la plateforme, ce qui evite des diffs entiers quand un fichier est ouvert sous
+# Windows puis sous Linux.
+* text=auto eol=lf
+
+# Le script de deploiement est execute par bash : des fins de ligne CRLF le
+# rendraient inexecutable.
+*.sh text eol=lf
+
+# Fichiers binaires, a ne jamais convertir. Les echantillons de test en
+# particulier : une conversion de fins de ligne corromprait un PDF, et les tests
+# echoueraient pour une raison sans rapport avec le code.
+*.pdf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+# Les XML d'echantillon sont compares octet par octet par certains tests, et l'un
+# d'eux porte volontairement une marque d'ordre des octets : ils doivent rester
+# tels quels.
+backend/tests/fixtures/** -text
+backend/tests/samples/** -text
+
+# Fichiers generes, exclus des statistiques de langage et des diffs par defaut.
+frontend/package-lock.json linguist-generated=true

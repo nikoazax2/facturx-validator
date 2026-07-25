@@ -1,0 +1,52 @@
+Copyright (c) 2026 Neoteem. Tous droits reserves.
+
+Ce logiciel et sa documentation sont la propriete de Neoteem. Aucune licence
+d'utilisation, de reproduction, de modification, de distribution ou de
+commercialisation n'est accordee, en dehors d'une autorisation ecrite prealable de
+Neoteem.
+
+L'acces public a une instance hebergee de ce logiciel n'emporte aucun droit sur le
+logiciel lui-meme.
+
+---
+
+Note sur le choix de licence
+
+Ce depot est volontairement sous licence propriétaire, et non sous une licence
+libre permissive. Le produit est destine a etre commercialise : une licence de
+type MIT permettrait a un tiers, concurrent inclus, de reprendre l'integralite du
+code et de le vendre.
+
+Ce choix reste reversible dans un seul sens. Ouvrir tout ou partie du code plus
+tard est toujours possible, par exemple selon un modele de noyau ouvert ou une
+double licence. Revenir en arriere apres une publication sous licence libre ne
+l'est pas.
+
+---
+
+Composants de tiers
+
+Les artefacts de validation recuperes a la construction ne sont pas couverts par
+la presente licence et conservent la leur. Ils sont redistribuables, y compris
+dans un produit commercial, sous reserve du respect de leurs conditions propres.
+
+- Schematron EN 16931, CEN/TC 434, distribue par ConnectingEurope :
+  European Union Public Licence version 1.2 (EUPL-1.2).
+  L'EUPL couvre les artefacts eux-memes. Les utiliser sans les modifier, comme
+  c'est le cas ici, n'impose pas de placer ce logiciel sous EUPL.
+- Schemas XSD Factur-X et Schematron par profil, publies par la FNFE-MPE,
+  obtenus via le paquet Python `factur-x` sous licence BSD-3-Clause.
+- Schemas UN/CEFACT Cross Industry Invoice et OASIS UBL 2.1, librement
+  redistribuables.
+
+Les bibliotheques Python et JavaScript utilisees sont sous licences permissives
+compatibles avec un usage commercial : FastAPI et Starlette (MIT), uvicorn (BSD),
+lxml (BSD), pikepdf (MPL-2.0), SaxonC-HE (Mozilla Public License 2.0), Vue (MIT),
+Vite (MIT).
+
+A verifier avant commercialisation : SaxonC-HE est sous MPL-2.0, ce qui autorise
+l'usage commercial sans contrepartie tant que la bibliotheque n'est pas modifiee.
+Si une modification devenait necessaire, ses sources modifiees devraient etre
+mises a disposition.
+
+Voir backend/tests/fixtures/PROVENANCE.md pour les fichiers d'exemple.

@@ -1,0 +1,25 @@
+# Environnements
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Artefacts de validation : recuperes par scripts/fetch_artifacts.py, jamais
+# versionnes. Ils appartiennent au CEN et a UN/CEFACT, et pesent plus de 10 Mo.
+backend/resources/
+
+# Interface construite, produite par npm run build
+backend/static/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Outils
+.playwright-mcp/
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

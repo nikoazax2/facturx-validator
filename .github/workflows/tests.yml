@@ -1,0 +1,187 @@
+name: Tests
+
+# Les artefacts de validation ne sont pas versionnes : ils sont recuperes ici,
+# comme a la construction de l'image. Une montee de version chez le CEN ou la
+# FNFE peut donc faire echouer cette chaine, et c'est voulu : mieux vaut
+# l'apprendre ici qu'en production.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend et moteur de validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # Sans ce service, les tests de compteur partage se sautent au lieu de
+      # s'executer, et la partie du code qui conditionne la facturation ne serait
+      # jamais eprouvee.
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Dependances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest httpx
+
+      - name: Recuperation des artefacts officiels
+        run: python scripts/fetch_artifacts.py
+
+      - name: Construction des echantillons
+        run: python scripts/build_samples.py
+
+      - name: Tests
+        working-directory: backend
+        env:
+          REDIS_URL: redis://127.0.0.1:6379/0
+        run: python -m pytest -q
+
+      - name: Performance
+        run: python scripts/measure_performance.py
+
+  verapdf:
+    name: Audit PDF/A
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Dependances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest httpx
+
+      - name: Recuperation des artefacts officiels
+        run: python scripts/fetch_artifacts.py
+
+      - name: Construction des echantillons
+        run: python scripts/build_samples.py
+
+      - name: Installation de veraPDF
+        run: |
+          set -eux
+          curl -sSL -o installer.zip https://software.verapdf.org/releases/verapdf-installer.zip
+          unzip -q installer.zip
+          cat > auto-install.xml <<'XML'
+          <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+          <AutomatedInstallation langpack="eng">
+            <com.izforge.izpack.panels.htmlhello.HTMLHelloPanel id="welcome"/>
+            <com.izforge.izpack.panels.target.TargetPanel id="install_dir">
+              <installpath>/opt/verapdf</installpath>
+            </com.izforge.izpack.panels.target.TargetPanel>
+            <com.izforge.izpack.panels.packs.PacksPanel id="sdk_pack_select">
+              <pack index="0" name="veraPDF GUI" selected="false"/>
+              <pack index="1" name="veraPDF CLI" selected="true"/>
+            </com.izforge.izpack.panels.packs.PacksPanel>
+            <com.izforge.izpack.panels.install.InstallPanel id="install"/>
+            <com.izforge.izpack.panels.finish.SimpleFinishPanel id="finish"/>
+          </AutomatedInstallation>
+          XML
+          sudo mkdir -p /opt/verapdf
+          sudo chown "$USER" /opt/verapdf
+          java -jar verapdf-greenfield-*/verapdf-izpack-installer-*.jar auto-install.xml
+          ln -s "$(basename /opt/verapdf/bin/cli-*.jar)" /opt/verapdf/bin/cli.jar
+          test -f /opt/verapdf/bin/cli.jar
+
+      - name: Tests avec audit PDF/A
+        working-directory: backend
+        env:
+          VERAPDF_ENABLED: '1'
+          VERAPDF_JAR: /opt/verapdf/bin/cli.jar
+        run: python -m pytest -q tests/test_verapdf.py
+
+  interface:
+    name: Interface
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Dependances
+        working-directory: frontend
+        run: npm ci
+
+      - name: Construction
+        working-directory: frontend
+        run: npm run build
+
+  image:
+    name: Image Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [backend, interface]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construction de l'image par defaut
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: facturx-validator:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Le service demarre et valide une facture
+        run: |
+          set -eux
+          docker run -d --name fxv -p 8080:8080 facturx-validator:ci
+          for tentative in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:8080/api/health >/dev/null; then break; fi
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:8080/api/health | tee /dev/stderr | grep -q '"status":"ok"'
+          curl -sf -o rapport.json -X POST \
+            -F "file=@backend/tests/samples/01-valide-en16931.pdf" \
+            http://127.0.0.1:8080/api/validate
+          python -c "import json;r=json.load(open('rapport.json'));assert r['verdict']['code']=='conforme',r['verdict'];assert r['summary']['errors']==0;print('verdict conforme, zero erreur')"
+          docker rm -f fxv
