@@ -835,6 +835,13 @@ frontend/
     styles.css              Styles sur sélecteurs d'éléments
 ```
 
+## Voir aussi
+
+Pour lire une facture plutôt que la valider, [Factur-X Viewer](https://facturxviewer.fr)
+affiche un PDF Factur-X ou un XML CII ou UBL comme un document lisible, avec
+des contrôles rapides des totaux, de la TVA et de l'IBAN. Le traitement se fait
+entièrement dans le navigateur, en ligne ou via l'extension Chrome.
+
 ## Licences
 
 Le code de ce dépôt est sous licence MIT. Les artefacts récupérés à la
